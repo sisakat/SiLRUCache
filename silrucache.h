@@ -29,6 +29,7 @@ SOFTWARE.
 #include <unordered_map>
 #include <cstdint>
 #include <algorithm>
+#include <stdexcept>
 
 template <typename Value, typename Size = uint32_t, Size defaultSize = 1>
 class SiLRUCacheItem {
