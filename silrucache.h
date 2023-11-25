@@ -172,6 +172,11 @@ public:
         m_cacheItems.clear();
     }
 
+    /**
+     * @brief Returns the total size of all elements inside the cache.
+     * 
+     * @return Size 
+     */
     Size size() const {
         Size totalSize{};
         for (const auto& [key, value] : m_cacheItems) {
