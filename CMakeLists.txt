@@ -6,7 +6,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(PROJECT_SOURCES
-    silrucache.cpp
     silrucache.h
     test.cpp
     external/catch2/catch_amalgamated.cpp
