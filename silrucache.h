@@ -6,10 +6,58 @@
 #include <cstdint>
 #include <algorithm>
 
-template <typename Key, typename Value>
+template <typename Value, typename Size = uint32_t, Size defaultSize = 1>
+class SiLRUCacheItem {
+public:
+    SiLRUCacheItem() {}
+
+    SiLRUCacheItem(Value&& val) 
+        : m_value{std::move(val)} 
+    {}
+
+    SiLRUCacheItem(const Value& val) 
+        : m_value{val}
+    {}
+
+    SiLRUCacheItem(Value&& val, Size size) 
+        : m_value{val}, m_size{size}
+    {}
+
+    SiLRUCacheItem(const Value& val, Size size) 
+        : m_value{val}, m_size{size}
+    {}
+
+    Size size() const {
+        return m_size;
+    }
+
+    Value& value() {
+        return m_value;
+    }
+
+    const Value& value() const {
+        return m_value;
+    }
+
+    Value& operator*() {
+        return m_value;
+    }
+
+    const Value& operator*() const {
+        return m_value;
+    }
+
+private:
+    Size m_size{defaultSize};
+    Value m_value{};
+};
+
+template <typename Key, typename Value, typename Size = uint32_t, Size defaultSize = 1>
 class SiLRUCache {
 public:
-    SiLRUCache(uint32_t cacheSize)
+    using CacheItemType = SiLRUCacheItem<Value, Size, defaultSize>;
+
+    SiLRUCache(Size cacheSize)
         : m_cacheSize(cacheSize), m_queue(0)
     {}
 
@@ -20,8 +68,8 @@ public:
      * @param value Cache Value
      */
     void addItem(const Key& key, const Value& value) {
-        checkQueueSize();
-        m_cacheIndices.emplace({key, value});
+        checkQueueSize(defaultSize);
+        m_cacheItems.emplace(key, value);
         updateQueue(key);
     }
 
@@ -32,9 +80,39 @@ public:
      * @param value Cache Value
      */
     void addItem(const Key& key, Value&& value) {
-        checkQueueSize();
-        m_cacheIndices.emplace(key, std::move(value));
+        checkQueueSize(defaultSize);
+        m_cacheItems.emplace(key, std::move(value));
         updateQueue(key);
+    }
+
+    /**
+     * @brief Adds a new item into the cache.
+     * 
+     * @param key Cache Key
+     * @param value Cache Value
+     */
+    void addItem(const Key& key, const CacheItemType& value) {
+        checkQueueSize(value.size());
+        m_cacheItems.emplace(key, value);
+        updateQueue(key);
+    }
+
+    /**
+     * @brief Adds a new item into the cache.
+     * 
+     * @param key Cache Key
+     * @param value Cache Value
+     */
+    void addItem(const Key& key, CacheItemType&& value) {
+        checkQueueSize(value.size());
+        m_cacheItems.emplace(key, std::move(value));
+        updateQueue(key);
+    }
+
+    void removeItem(const Key& key) {
+        if (!contains(key)) return;
+        m_cacheItems.erase(key);
+        removeFromQueue(key);
     }
 
     /**
@@ -45,7 +123,7 @@ public:
      * @return false If the key is not contained in the cache.
      */
     bool contains(const Key& key) {
-        return m_cacheIndices.find(key) != m_cacheIndices.end();
+        return m_cacheItems.find(key) != m_cacheItems.end();
     }
 
     /**
@@ -54,10 +132,9 @@ public:
      * @param key Key of the cache item.
      * @return Value* Pointer to the value.
      */
-    Value* getItem(const Key& key) {
-        if (!contains(key)) return nullptr;
+    auto& getItem(const Key& key) {
         updateQueue(key);
-        return &m_cacheIndices.at(key);
+        return m_cacheItems.at(key);
     }
 
     /**
@@ -66,10 +143,9 @@ public:
      * @param key Key of the cache item.
      * @return Value* Pointer to the value.
      */
-    const Value* getItem(const Key& key) const {
-        if (!contains(key)) return nullptr;
+    const auto& getItem(const Key& key) const {
         updateQueue(key);
-        return &m_cacheIndices.at(key);
+        return m_cacheItems.at(key);
     }
 
     /**
@@ -87,27 +163,42 @@ public:
      */
     void reset() {
         m_queue.clear();
-        m_cacheIndices.clear();
+        m_cacheItems.clear();
+    }
+
+    Size size() const {
+        Size totalSize{};
+        for (const auto& [key, value] : m_cacheItems) {
+            totalSize += value.size();
+        }
+        return totalSize;
     }
 
 private:
-    const uint32_t m_cacheSize;
+    const Size m_cacheSize;
     std::vector<Key> m_queue;
-    std::unordered_map<Key, Value> m_cacheIndices;
+    std::unordered_map<Key, CacheItemType> m_cacheItems;
 
     void updateQueue(const Key& key) {
         if (m_queue.size() > 0 && m_queue.back() == key) return;
-        std::remove_if(m_queue.begin(), m_queue.end(), [&key](const auto& k) {
-            return k == key;
-        });
+        removeFromQueue(key);
         m_queue.push_back(key);
     }
 
-    void checkQueueSize() {
-        if (m_queue.size() >= m_cacheSize) {
-            m_cacheIndices.erase(m_queue.front());
+    void checkQueueSize(Size requestedSize) {
+        while (size() + requestedSize > m_cacheSize) {
+            if  (m_queue.empty()) {
+                throw std::runtime_error("Cache too small.");
+            }
+            m_cacheItems.erase(m_queue.front());
             m_queue.erase(m_queue.begin(), m_queue.begin() + 1);
         }
+    }
+
+    void removeFromQueue(const Key& key) {
+        std::remove_if(m_queue.begin(), m_queue.end(), [&key](const auto& k) {
+            return k == key;
+        });
     }
 };
 

@@ -7,8 +7,8 @@ TEST_CASE("Insert and get item with primitive type") {
     SiLRUCache<int, int> cache(10);
     cache.addItem(1, 10);
     cache.addItem(2, 20);
-    REQUIRE(*cache.getItem(1) == 10);
-    REQUIRE(*cache.getItem(2) == 20);
+    REQUIRE(cache.getItem(1).value() == 10);
+    REQUIRE(cache.getItem(2).value() == 20);
 }
 
 TEST_CASE("Insert three items with cache size of 2") {
@@ -16,17 +16,17 @@ TEST_CASE("Insert three items with cache size of 2") {
     cache.addItem(1, 10);
     cache.addItem(2, 20);
     cache.addItem(3, 30);
-    REQUIRE(*cache.getItem(2) == 20);
-    REQUIRE(*cache.getItem(3) == 30);
-    REQUIRE(cache.getItem(1) == nullptr);
+    REQUIRE(cache.getItem(2).value() == 20);
+    REQUIRE(cache.getItem(3).value() == 30);
+    REQUIRE_FALSE(cache.contains(1));
 }
 
 TEST_CASE("Insert non-moveable cache items") {
     SiLRUCache<int, std::unique_ptr<int>> cache(1);
     cache.addItem(1, std::make_unique<int>(10));
     cache.addItem(2, std::make_unique<int>(20));
-    REQUIRE(*(*cache.getItem(2)) == 20);
-    REQUIRE(cache.getItem(1) == nullptr);
+    REQUIRE(*(cache.getItem(2).value()) == 20);
+    REQUIRE_FALSE(cache.contains(1));
 }
 
 TEST_CASE("Check if least recently used are removed") {
@@ -44,7 +44,17 @@ TEST_CASE("Check if least recently used are removed") {
     cache.getItem(2);
     cache.addItem(6, 60);
 
-    REQUIRE(*cache.getItem(1) == 10);
-    REQUIRE(*cache.getItem(6) == 60);
-    REQUIRE(cache.getItem(4) == nullptr);
+    REQUIRE(cache.getItem(1).value() == 10);
+    REQUIRE(cache.getItem(6).value() == 60);
+    REQUIRE_FALSE(cache.contains(4));
+}
+
+TEST_CASE("Cache item with custom size") {
+    SiLRUCache<int, int, int, 2> cache(4); // can hold 2 items
+    cache.addItem(1, 10);
+    cache.addItem(2, SiLRUCacheItem<int, int, 2>(20));
+    SiLRUCacheItem<int, int, 2> item3;
+    item3.value() = 30;
+    cache.addItem(3, item3);
+    REQUIRE(cache.size() == 4);
 }
