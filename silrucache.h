@@ -9,7 +9,8 @@
 template <typename Value, typename Size = uint32_t, Size defaultSize = 1>
 class SiLRUCacheItem {
 public:
-    SiLRUCacheItem() {}
+    SiLRUCacheItem() 
+    {}
 
     SiLRUCacheItem(Value&& val) 
         : m_value{std::move(val)} 

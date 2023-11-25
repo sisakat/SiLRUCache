@@ -2,6 +2,7 @@
 #include "silrucache.h"
 
 #include <memory>
+#include <string>
 
 TEST_CASE("Insert and get item with primitive type") {
     SiLRUCache<int, int> cache(10);
@@ -57,4 +58,10 @@ TEST_CASE("Cache item with custom size") {
     item3.value() = 30;
     cache.addItem(3, item3);
     REQUIRE(cache.size() == 4);
+}
+
+TEST_CASE("Insert cache item which is to big for cache") {
+    SiLRUCache<int, std::string> cache(10);
+    SiLRUCacheItem<std::string> item("test", 100);
+    REQUIRE_THROWS_AS(cache.addItem(1, item), std::runtime_error);
 }
