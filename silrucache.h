@@ -109,6 +109,11 @@ public:
         updateQueue(key);
     }
 
+    /**
+     * @brief Removes the cache item with the specified key from the cache.
+     * 
+     * @param key Cache Key
+     */
     void removeItem(const Key& key) {
         if (!contains(key)) return;
         m_cacheItems.erase(key);
